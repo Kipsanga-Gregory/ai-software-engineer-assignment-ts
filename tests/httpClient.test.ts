@@ -30,4 +30,27 @@ describe("HttpClient OAuth2 behavior", () => {
 
     expect(resp.headers.Authorization).toBe("Bearer fresh-token");
   });
+
+  test("api=true refreshes when token is a non-OAuth2Token object with valid-looking fields", () => {
+    // A plain object with the same shape as OAuth2Token should still trigger a refresh,
+    // because it lacks the prototype methods (asHeader, expired getter) of a real OAuth2Token.
+    const c = new HttpClient();
+    c.oauth2Token = {
+      accessToken: "looks-valid",
+      expiresAt: Math.floor(Date.now() / 1000) + 9999,
+    };
+
+    const resp = c.request("GET", "/me", { api: true });
+
+    expect(resp.headers.Authorization).toBe("Bearer fresh-token");
+  });
+
+  test("api=true refreshes when OAuth2Token is expired", () => {
+    const c = new HttpClient();
+    c.oauth2Token = new OAuth2Token("expired-token", 0);
+
+    const resp = c.request("GET", "/me", { api: true });
+
+    expect(resp.headers.Authorization).toBe("Bearer fresh-token");
+  });
 });
